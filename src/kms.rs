@@ -29,6 +29,8 @@ pub async fn encrypt_and_store_in_kms(
         .send()
         .await?;
 
+    println!("Encryped keypair to KMS key: {}", key_id);
+
     // Get the encrypted blob
     let ciphertext = encrypt_response.ciphertext_blob().unwrap();
     let ciphertext_bytes = ciphertext.as_ref();
