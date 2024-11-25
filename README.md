@@ -1,43 +1,52 @@
-# Solana Key Encoder/Decoder
+# KMS Encryption Kit
 
-A command-line utility for encoding Solana keypairs to base64 and decoding base64 strings back to keypairs.
+Command-line utility to encrypt Solana keypairs using AWS KMS.
 
 ## Features
 
-- Encode Solana keypair JSON files to base64
-- Decode base64 strings back to keypairs
-- Verify public key matches during encoding
-- Support for different JSON keypair formats
+- Encode Solana keypair JSON to base64
+- Encrypt/decrypt using AWS KMS
+- Public key verification
+- Support for existing or new KMS keys
 
-## Installation
+## Setup
 
 ```bash
 cargo build --release
+export AWS_ACCESS_KEY_ID=your_access_key
+export AWS_SECRET_ACCESS_KEY=your_secret_key
+export AWS_REGION=us-west-2  # Default region
 ```
 
 ## Usage
 
-### Encoding
+### Encrypt keypair:
 
 ```bash
-./target/release/kms-encryption-kit <path-to-keypair.json> <public-key>
+./kms-encryption-kit <PATH_TO_KEYPAIR_JSON_FILE> <PUBLIC_KEY> [KMS_KEY_ID]
 ```
 
-### Decoding
+### Decrypt encrypted key:
 
 ```bash
-./target/release/kms-encryption-kit --decode
+./kms-encryption-kit decrypt <ENCRYPTED_BASE_64_KEY> <KMS_KEY_ID>
+```
+
+### Example:
+
+```bash
+# Encrypt
+./kms-encryption-kit path/to/my-keypair.json MyKeypairPublicKey1111111111111 some-secure-kms-key-id
+
+# Decrypt
+./kms-encryption-kit decrypt <ENCRYPTED_BASE_64_KEY> some-secure-kms-key-id
 ```
 
 ## Dependencies
 
-```toml
-base64 = "0.21"
-ed25519-dalek = "2.0"
-solana-sdk = "1.17"
-serde_json = "1.0"
-```
+See [`Cargo.toml`](./Cargo.toml) for complete list
 
-## License
+## AWS Requirements
 
-MIT
+- KMS permissions for key creation/encryption/decryption
+- Valid AWS credentials

@@ -1,5 +1,6 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use ed25519_dalek::SigningKey;
+use kms::{decrypt_with_kms, encrypt_and_store_in_kms};
 use serde_json::Value;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signer::keypair::Keypair;
@@ -109,49 +110,74 @@ fn verify_and_encode_key(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
 
-    if args.len() == 2 && args[1] == "--decode" {
-        println!("Enter base64 string to decode:");
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
-        let base64_string = input.trim();
+    let usage = format!(
+        "Usage:\n\
+        {} <path-to-private-key> <expected-public-key> [kms-key-id]\n\
+        {} --decode\n\
+        {} decrypt <encrypted-key> <kms-key-id>",
+        args[0], args[0], args[0]
+    );
 
-        let keypair_bytes = decode_from_base64(base64_string)?;
-        let keypair = Keypair::from_bytes(&keypair_bytes)?;
-
-        println!("Decoded keypair bytes: {:?}", keypair_bytes);
-        println!("Public key: {}", keypair.pubkey());
-        return Ok(());
-    }
-
-    if args.len() != 3 {
-        eprintln!(
-            "Usage: {} <path-to-private-key> <expected-public-key>",
-            args[0]
-        );
+    if args.len() < 2 {
+        eprintln!("{}", usage);
         std::process::exit(1);
     }
 
-    let key_path = &args[1];
-    let expected_pubkey = &args[2];
-
-    match read_keypair_from_json(key_path) {
-        Ok(private_key) => match verify_and_encode_key(&private_key, expected_pubkey) {
-            Ok(encoded) => {
-                println!("Public key verified successfully!");
-                let encrypted = kms::encrypt_and_store_in_kms(&encoded).await?;
-                println!("Encrypted key: {}", encrypted);
-                Ok(())
-            }
-            Err(e) => {
-                eprintln!("Error verifying key: {}", e);
+    match args[1].as_str() {
+        "decrypt" => {
+            if args.len() != 4 {
+                eprintln!("Usage: {} decrypt <encrypted-key> <kms-key-id>", args[0]);
                 std::process::exit(1);
             }
-        },
-        Err(e) => {
-            eprintln!("Error reading private key file: {}", e);
-            std::process::exit(1);
+            let encrypted_key = &args[2];
+            let key_id = &args[3];
+            let decrypted_bytes = decrypt_with_kms(encrypted_key, key_id).await?;
+            let base64_key = String::from_utf8(decrypted_bytes)?;
+            let keypair_bytes = decode_from_base64(&base64_key)?;
+            let keypair = Keypair::from_bytes(&keypair_bytes)?;
+            println!("Decrypted public key: {}", keypair.pubkey());
+        } // ... rest of the match cases remain the same
+        _ => {
+            let usage = format!(
+                "Usage: {} <path-to-private-key> <expected-public-key> [kms-key-id]",
+                args[0]
+            );
+
+            if args.len() < 3 || args.len() > 4 {
+                eprintln!("{}", usage);
+                std::process::exit(1);
+            }
+
+            let key_path = &args[1];
+            let expected_pubkey = &args[2];
+            let kms_key_id = args.get(3);
+
+            match read_keypair_from_json(key_path) {
+                Ok(private_key) => match verify_and_encode_key(&private_key, expected_pubkey) {
+                    Ok(encoded) => {
+                        println!("Public key verified successfully!");
+                        let encrypted =
+                            encrypt_and_store_in_kms(&encoded, kms_key_id.map(|s| s.as_str()))
+                                .await?;
+                        println!("Encrypted key: {}", encrypted);
+                        if kms_key_id.is_none() {
+                            println!("New KMS key created");
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error verifying key: {}", e);
+                        std::process::exit(1);
+                    }
+                },
+                Err(e) => {
+                    eprintln!("Error reading private key file: {}", e);
+                    std::process::exit(1);
+                }
+            }
         }
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
