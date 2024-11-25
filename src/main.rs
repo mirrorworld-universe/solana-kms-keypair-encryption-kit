@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
-use ed25519_dalek::{SecretKey, SigningKey};
+use ed25519_dalek::SigningKey;
 use serde_json::Value;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signer::keypair::Keypair;
@@ -8,6 +8,8 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
 use std::str::FromStr;
+
+mod kms;
 
 fn read_keypair_from_json<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     // Read the JSON file
@@ -103,9 +105,8 @@ fn verify_and_encode_key(
     Ok(encode_key_to_base64(&keypair.secret().to_bytes()))
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = std::env::args().collect();
-
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() == 2 && args[1] == "--decode" {
@@ -137,7 +138,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(private_key) => match verify_and_encode_key(&private_key, expected_pubkey) {
             Ok(encoded) => {
                 println!("Public key verified successfully!");
-                println!("Base64 encoded private key: {}", encoded);
+                let encrypted = kms::encrypt_and_store_in_kms(&encoded).await?;
+                println!("Encrypted key: {}", encrypted);
                 Ok(())
             }
             Err(e) => {
