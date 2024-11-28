@@ -136,6 +136,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let keypair_bytes = decode_from_base64(&base64_key)?;
             let keypair = Keypair::from_bytes(&keypair_bytes)?;
             println!("Decrypted public key: {}", keypair.pubkey());
+            println!("Decrypted secret key: {:?}", keypair.to_base58_string());
         } // ... rest of the match cases remain the same
         _ => {
             let usage = format!(
