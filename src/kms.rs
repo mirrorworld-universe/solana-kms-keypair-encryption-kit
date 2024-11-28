@@ -28,7 +28,7 @@ pub async fn encrypt_and_store_in_kms(
     key_id: Option<&str>,
 ) -> Result<String, Box<dyn std::error::Error>> {
     // Load AWS configuration from environment variables
-    tracing_subscriber::fmt::init();
+    // tracing_subscriber::fmt::init();
 
     let region_provider = RegionProviderChain::default_provider().or_else(Region::new("us-west-2"));
 
@@ -87,7 +87,7 @@ pub async fn decrypt_with_kms(
     key_id: &str,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     // Load AWS configuration from environment variables
-    tracing_subscriber::fmt::init();
+    // tracing_subscriber::fmt::init();
 
     let region_provider = RegionProviderChain::default_provider().or_else(Region::new("us-west-2"));
 

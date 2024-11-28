@@ -103,7 +103,7 @@ fn verify_and_encode_key(
     }
 
     // Return just the private key portion encoded in base64
-    Ok(encode_key_to_base64(&keypair.secret().to_bytes()))
+    Ok(encode_key_to_base64(&keypair.to_bytes()))
 }
 
 #[tokio::main]
@@ -133,7 +133,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let key_id = &args[3];
             let decrypted_bytes = decrypt_with_kms(encrypted_key, key_id).await?;
             let base64_key = String::from_utf8(decrypted_bytes)?;
-            let keypair_bytes = decode_from_base64(&base64_key)?;
+            let keypair_bytes = STANDARD.decode(base64_key)?;
             let keypair = Keypair::from_bytes(&keypair_bytes)?;
             println!("Decrypted public key: {}", keypair.pubkey());
             println!("Decrypted secret key: {:?}", keypair.to_base58_string());
@@ -182,7 +182,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[cfg(test)]
-#[cfg(test)]
 mod tests {
     use super::*;
     use std::fs::write;
@@ -205,6 +204,41 @@ mod tests {
         let encoded = verify_and_encode_key(&read_key, &pubkey)?;
 
         assert!(!encoded.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_verify_and_encode_decode_key() -> Result<(), Box<dyn std::error::Error>> {
+        // Create a known keypair for testing
+        let keypair = Keypair::new();
+        let pubkey = keypair.pubkey().to_string();
+        println!("origin pubkey: {}", pubkey.to_string());
+        println!("origin private pubkey: {}", keypair.to_base58_string());
+        // Create JSON file with keypair
+        let json = serde_json::to_string(&keypair.to_bytes().to_vec())?;
+
+        let temp_file = NamedTempFile::new()?;
+        write(temp_file.path(), json)?;
+
+        // Read and verify the key
+        let read_key = read_keypair_from_json(temp_file.path())?;
+        let utf8_string = verify_and_encode_key(&read_key, &pubkey)?;
+
+        assert!(!utf8_string.is_empty());
+
+        let key_id = "2d20909e-02f9-41b0-8fbc-2e4dc37b2915";
+
+        let encrypted_kms_data = encrypt_and_store_in_kms(&utf8_string, Some(key_id)).await?;
+        // let encrypted_kms_data = String::from_utf8(encrypted_kms_data);
+
+        let decrypted_bytes = decrypt_with_kms(encrypted_kms_data.as_str(), key_id).await?;
+        let base64_key = String::from_utf8(decrypted_bytes)?;
+        // let keypair_bytes = decode_from_base64(&base64_key)?;
+        let keypair_bytes = STANDARD.decode(base64_key)?;
+        let keypair = Keypair::from_bytes(&keypair_bytes)?;
+        println!("Decrypted public key: {}", keypair.pubkey());
+        println!("Decrypted private key: {:?}", keypair.to_base58_string());
+
         Ok(())
     }
 }
