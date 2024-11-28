@@ -1,12 +1,11 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
-use ed25519_dalek::SigningKey;
 use kms::{decrypt_with_kms, encrypt_and_store_in_kms};
 use serde_json::Value;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::signer::keypair::Keypair;
 use solana_sdk::signer::Signer;
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::Read;
 use std::path::Path;
 use std::str::FromStr;
 
@@ -54,28 +53,6 @@ fn read_keypair_from_json<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, Box<dyn st
 }
 fn encode_key_to_base64(key: &[u8]) -> String {
     STANDARD.encode(key)
-}
-
-fn decode_from_base64(base64_string: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let secret_key_bytes = STANDARD.decode(base64_string)?;
-
-    if secret_key_bytes.len() != 32 {
-        return Err("Invalid secret key length".into());
-    }
-
-    let secret_key_array = secret_key_bytes
-        .as_slice()
-        .try_into()
-        .map_err(|_| "Failed to convert bytes to array")?;
-
-    let signing_key = SigningKey::from_bytes(&secret_key_array);
-    let verifying_key = signing_key.verifying_key();
-
-    let mut full_keypair = Vec::with_capacity(64);
-    full_keypair.extend_from_slice(&secret_key_array);
-    full_keypair.extend_from_slice(verifying_key.as_bytes());
-
-    Ok(full_keypair)
 }
 
 fn verify_and_encode_key(

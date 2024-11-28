@@ -115,7 +115,6 @@ pub async fn decrypt_with_kms(
         .await?;
 
     let bytes = decrypt_response.plaintext().unwrap().as_ref();
-    // let s = String::from_utf8(bytes.to_vec()).expect("Could not convert to UTF-8");
 
     Ok(bytes.to_vec())
 }
