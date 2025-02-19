@@ -32,6 +32,18 @@ export AWS_REGION=us-west-2  # Default region
 ./kms-encryption-kit decrypt <ENCRYPTED_BASE_64_KEY> <KMS_KEY_ID>
 ```
 
+### Encrypt message:
+
+```bash
+./kms-encryption-kit encrypt-message <MESSAGE> [KMS_KEY_ID]
+```
+
+### Decrypt encrypted message:
+
+```bash
+./kms-encryption-kit decrypt-message <ENCRYPTED_BASE_64_MESSAGE> <KMS_KEY_ID>
+```
+
 ### Example:
 
 ```bash
@@ -40,6 +52,12 @@ export AWS_REGION=us-west-2  # Default region
 
 # Decrypt
 ./kms-encryption-kit decrypt <ENCRYPTED_BASE_64_KEY> some-secure-kms-key-id
+
+# Encrypt message
+./kms-encryption-kit encrypt-message <message> <kms-id>
+
+# Decrypt message
+./kms-encryption-kit decrypt-message <encrypted message> <kms-id>
 ```
 
 ## Dependencies
