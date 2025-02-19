@@ -115,6 +115,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Decrypted public key: {}", keypair.pubkey());
             println!("Decrypted secret key: {:?}", keypair.to_base58_string());
         } // ... rest of the match cases remain the same
+        "decrypt-message" => {
+            if args.len() != 4 {
+                eprintln!("Usage: {} decrypt-message <encrypted-message> <kms-key-id>", args[0]);
+                std::process::exit(1);
+            }
+            let encrypted_key = &args[2];
+            let key_id = &args[3];
+            let decrypted_bytes = decrypt_with_kms(encrypted_key, key_id).await?;
+            let base64_message = String::from_utf8(decrypted_bytes)?;
+            let message_bytes = STANDARD.decode(base64_message)?;
+            let message = String::from_utf8(message_bytes)?;
+            println!("Decrypted message: {:?}", message);
+        }
+        "encrypt-message" => {
+            if args.len() != 4 {
+                eprintln!("Usage: {} encrypt-message <message> <kms-key-id>", args[0]);
+                std::process::exit(1);
+            }
+
+            let message = &args[2];
+            let kms_key_id = args.get(3);
+            let base64_message = STANDARD.encode(message.as_bytes());
+            let encrypted = encrypt_and_store_in_kms(&base64_message, kms_key_id.map(|s| s.as_str())).await?;
+            println!("Encrypted message: {}", encrypted);
+        }
         _ => {
             let usage = format!(
                 "Usage: {} <path-to-private-key> <expected-public-key> [kms-key-id]",
